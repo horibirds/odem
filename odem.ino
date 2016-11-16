@@ -1,4 +1,5 @@
 #include "MsTimer2.h"
+#include "TimerOne.h"
 
 #define ODEM_NUM 3
 
@@ -18,7 +19,7 @@
 
 #define ODEM_MAGNET_IN_PIN 13
 
-#define DUTY 100
+#define DUTY_MAX 255
 
 int odem_pins[ODEM_PIN_NUM] = {
   ODEM1_R_PIN,
@@ -31,68 +32,77 @@ int odem_pins[ODEM_PIN_NUM] = {
   ODEM3_G_PIN,
   ODEM3_B_PIN
 };
+
+int led_duty_nums[ODEM_PIN_NUM] = {
+  0
+};
+
 enum odem_st {
   SLEEP,
   WAKE,
   WHEEL,
   ACTIVE,
 };
-odem_st odem_st = SLEEP;
+odem_st odem_st = ACTIVE;
+
+int pattern_index = 0;
+#define LED_PATTERN_NUM 8
+int led_pattern[LED_PATTERN_NUM][3] = {
+  {255, 70, 70}, // pink
+  {255, 120, 0}, // purple
+  {255, 0, 100}, // orange
+  {255, 0, 190}, // yellow
+  {150, 0, 200}, // yellow green
+  {0, 0, 255}, // green
+  {255, 0, 0}, //red
+  {0, 255, 0}, //blue
+};
 
 void write_odem(int odem_index, int R, int G, int B) {
-  int R_duty = map(R, 0, 255, 0, DUTY);
-  int G_duty = map(G, 0, 255, 0, DUTY);
-  int B_duty = map(B, 0, 255, 0, DUTY);
   if (odem_index >= 0 && odem_index <= 2) {
-    for (int i = 0; i < DUTY; i++) {
       int pin_index = odem_index * 3;
-      if (i < R_duty - 1) { // -1しないとi=DUTYにならないから、LOWにならなくて一回すごく明るくなってしまう
-        digitalWrite(odem_pins[pin_index], HIGH);
-      }
-      else {
-        digitalWrite(odem_pins[pin_index], LOW);
-      }
+      led_duty_nums[pin_index] = map(R, 0, 255, 0, DUTY_MAX);
       pin_index++;
-      if (i < G_duty - 1) {
-        digitalWrite(odem_pins[pin_index], HIGH);
-      }
-      else {
-        digitalWrite(odem_pins[pin_index], LOW);
-      }
+      led_duty_nums[pin_index] = map(G, 0, 255, 0, DUTY_MAX);
       pin_index++;
-      if (i < B_duty - 1) {
-        digitalWrite(odem_pins[pin_index], HIGH);
-      }
-      else {
-        digitalWrite(odem_pins[pin_index], LOW);
-      }
+      led_duty_nums[pin_index] = map(B, 0, 255, 0, DUTY_MAX);
     }
-  }
 }
 
 int timer_count = 0;
 int door_count = 0;
-bool b_door = false;
-bool ex_b_door = false;
+bool b_door = true;
+bool ex_b_door = true;
 bool door_int_flag = false;
 
-#define LED_PATTERN_NUM 5
-int led_pattern[LED_PATTERN_NUM][3] = {
-  {255, 0, 0},
-  {255, 70, 70},
-  {0, 255, 0},
-  {255, 255, 0},
-  {0, 0, 255},
-};
+int duty_rate = 0;
+void led_duty(){
+  if(duty_rate >= DUTY_MAX){
+    duty_rate = 0;
+    for(int i=0; i<ODEM_PIN_NUM; i++){
+      if(led_duty_nums[i] == 0){
+        digitalWrite(odem_pins[i],LOW);
+      }
+      else{
+        digitalWrite(odem_pins[i],HIGH);
+      }
+    }
+    return;
+  }
+  for(int i=0; i<ODEM_PIN_NUM; i++){
+    if(duty_rate == led_duty_nums[i]){
+      digitalWrite(odem_pins[i],LOW);
+    }
+  }
+  duty_rate++;
+}
 
-int pattern_index = 0;
 
 void led_timer() {
   if (odem_st == SLEEP) {
     if (timer_count > 255) {
       timer_count = 0;
     }
-
     write_odem(0, 0, 0, 0);
     write_odem(1, 0, 0, 0);
     write_odem(2, 0, 0, 0);
@@ -207,8 +217,6 @@ void setup() {
   write_odem(1, 0, 0, 0);
   write_odem(2, 0, 0, 0);
 
-  // timer
-  MsTimer2::set(10, led_timer);
 
   Serial.begin(9600);
 
@@ -227,8 +235,15 @@ void setup() {
   }
   thre_up = default_touch_count * 1.5;
   thre_down = default_touch_count * 1.2;
-write_odem(2, 255, 255, 255);
+
+  // timer
+  Timer1.initialize();
+  MsTimer2::set(10, led_timer);
+  Timer1.attachInterrupt(led_duty,1);
   MsTimer2::start();
+  write_odem(2, 0, 0, 0);
+  write_odem(1, 0, 0, 0);
+  write_odem(0, 0, 0, 0);
   
 }
 
