@@ -143,7 +143,7 @@ int thre_up;
 int thre_down;
 void setup() {
   pinMode(LED_PIN, OUTPUT);
-  
+
   pinMode(ODEM_TOUCH_IN_PIN, INPUT);
   pinMode(ODEM_TOUCH_OUT_PIN, OUTPUT);
 
@@ -204,6 +204,7 @@ void loop() {
   ex_b_door = b_door;
   b_door = digitalRead(ODEM_MAGNET_IN_PIN);
   if (ex_b_door == false && b_door == true) {
+    timer_count = 0;
     odem_st = ACTIVE;
     door_int_flag = true;
     door_count = 0;
@@ -221,6 +222,7 @@ void loop() {
         }
         else if (odem_st == WHEEL) {
           odem_st = ACTIVE;
+          timer_count = 0;
         }
         else if (odem_st == ACTIVE) {
           odem_st = SLEEP;
