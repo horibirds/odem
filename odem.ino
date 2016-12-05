@@ -5,6 +5,8 @@
 #define LED_PIN 6
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(LED_NUM, LED_PIN, NEO_GRB + NEO_KHZ800);
 
+//Adafruit_NeoPixel strip2 = Adafruit_NeoPixel(LED_NUM, 5, NEO_GRB + NEO_KHZ800);
+
 #define ODEM_TOUCH_OUT_PIN 11
 #define ODEM_TOUCH_IN_PIN 12
 #define ODEM_MAGNET_IN_PIN 13
@@ -57,6 +59,7 @@ bool b_door = true;
 bool ex_b_door = true;
 bool door_int_flag = false;
 
+int active_st = 0;
 void led_timer() {
   if (odem_st == SLEEP) {
     if (timer_count > 255) {
@@ -74,49 +77,148 @@ void led_timer() {
     strip.setBrightness(255);
   }
   else if (odem_st == ACTIVE) {
-    int interval = 50;
-    if (timer_count >= 300) {
-      timer_count = 0;
-      pattern_index++;
-      if (pattern_index >= LED_PATTERN_NUM) {
-        pattern_index = 0;
+    if (active_st == 0) {
+
+      if (timer_count > 255) {
+        timer_count = 0;
+        active_st = 1;
+      }
+      if(timer_count > 127){
+        for (int i = 0; i < LED_NUM; i++) {
+          strip.setPixelColor(i, wheel_pattern(timer_count));
+        }
+        strip.setBrightness(map(timer_count,128,255,255,0));
+      }
+      else{
+        
+        for (int i = 0; i < LED_NUM; i++) {
+          strip.setPixelColor(i, wheel_pattern(timer_count));
+        }
+        strip.setBrightness(map(timer_count,0,127,0,255));
       }
     }
-    strip.setBrightness(255);
-    for (int i = 0; i < LED_NUM; i++) {
-      strip.setPixelColor(i, 0, 0, 0);
+    else if(active_st ==1){
+      
+        strip.setBrightness(0);
+      if (timer_count > 40) {
+        timer_count = 0;
+        active_st = 2;
+      }
     }
-    if (timer_count < 50)
-    {
-      int pos = timer_count;
-      strip.setPixelColor(0, map(pos, 0, interval, 0, led_pattern[pattern_index][0]), map(pos, 0, interval, 0, led_pattern[pattern_index][1]), map(pos, 0, interval, 0, led_pattern[pattern_index][2]));
-    }
-    else if (timer_count < 100)
-    {
-      int pos = timer_count - interval;
-      strip.setPixelColor(0, map(pos, 0, interval, led_pattern[pattern_index][0], 0), map(pos, 0, interval, led_pattern[pattern_index][1], 0), map(pos, 0, interval, led_pattern[pattern_index][2], 0));
-    }
-    else if (timer_count < 150)
-    {
-      int pos = timer_count - (2 * interval);
-      strip.setPixelColor(1, map(pos, 0, interval, 0, led_pattern[pattern_index][0]), map(pos, 0, interval, 0, led_pattern[pattern_index][1]), map(pos, 0, interval, 0, led_pattern[pattern_index][2]));
-    }
-    else if (timer_count < 200)
-    {
-      int pos = timer_count - (3 * interval);
-      strip.setPixelColor(1, map(pos, 0, interval, led_pattern[pattern_index][0], 0), map(pos, 0, interval, led_pattern[pattern_index][1], 0), map(pos, 0, interval, led_pattern[pattern_index][2], 0));
-    }
-    else if (timer_count < 250)
-    {
-      int pos = timer_count - (4 * interval);
-      strip.setPixelColor(2, map(pos, 0, interval, 0, led_pattern[pattern_index][0]), map(pos, 0, interval, 0, led_pattern[pattern_index][1]), map(pos, 0, interval, 0, led_pattern[pattern_index][2]));
-    }
-    else if (timer_count <= 300)
-    {
-      int pos = timer_count - (5 * interval);
-      strip.setPixelColor(2, map(pos, 0, interval, led_pattern[pattern_index][0], 0), map(pos, 0, interval, led_pattern[pattern_index][1], 0), map(pos, 0, interval, led_pattern[pattern_index][2], 0));
+    else if (active_st == 2) {
+
+      const int interval = 100;
+      const int delay_time = 130;
+      if (timer_count >= (interval * 6 - delay_time * 2)) {
+        timer_count = 0;
+        pattern_index++;
+        if (pattern_index >= LED_PATTERN_NUM) {
+          pattern_index = 0;
+        }
+      }
+      for (int i = 0; i < LED_NUM; i++) {
+        strip.setPixelColor(i, 0, 0, 0);
+      }
+      strip.setBrightness(255);
+      // odem 0
+      float brightness_rate = 0.15;
+      if (timer_count < interval)
+      {
+        int pos = timer_count;
+        strip.setPixelColor(0, map(pos, 0, interval, 0, led_pattern[pattern_index][0])*brightness_rate, map(pos, 0, interval, 0, led_pattern[pattern_index][1])*brightness_rate, map(pos, 0, interval, 0, led_pattern[pattern_index][2])*brightness_rate);
+      }
+      else if (timer_count < (interval * 2))
+      {
+        int pos = timer_count - interval;
+        strip.setPixelColor(0, map(pos, 0, interval, led_pattern[pattern_index][0], 0)*brightness_rate, map(pos, 0, interval, led_pattern[pattern_index][1], 0)*brightness_rate, map(pos, 0, interval, led_pattern[pattern_index][2], 0)*brightness_rate);
+      }
+      else {
+        strip.setPixelColor(0, 0, 0, 0);
+      }
+      // odem 1
+      brightness_rate = 0.5;
+      if (timer_count < (interval * 2 - delay_time)) {
+        strip.setPixelColor(1, 0, 0, 0);
+      }
+      else if (timer_count < (interval * 3 - delay_time))
+      {
+        int pos = timer_count - (2 * interval - delay_time);
+        strip.setPixelColor(1, map(pos, 0, interval, 0, led_pattern[pattern_index][0])*brightness_rate, map(pos, 0, interval, 0, led_pattern[pattern_index][1])*brightness_rate, map(pos, 0, interval, 0, led_pattern[pattern_index][2])*brightness_rate);
+      }
+      else if (timer_count < (interval * 4 - delay_time))
+      {
+        int pos = timer_count - (3 * interval - delay_time);
+        strip.setPixelColor(1, map(pos, 0, interval, led_pattern[pattern_index][0], 0)*brightness_rate, map(pos, 0, interval, led_pattern[pattern_index][1], 0)*brightness_rate, map(pos, 0, interval, led_pattern[pattern_index][2], 0)*brightness_rate);
+      }
+      else {
+        strip.setPixelColor(1, 0, 0, 0);
+      }
+      // odem 2
+      brightness_rate = 1.0;
+      if (timer_count < (interval * 4 - delay_time * 2))
+      {
+        strip.setPixelColor(2, 0, 0, 0);
+      }
+      else if (timer_count < (interval * 5 - delay_time * 2))
+      {
+        int pos = timer_count - (4 * interval - delay_time * 2);
+        strip.setPixelColor(2, map(pos, 0, interval, 0, led_pattern[pattern_index][0])*brightness_rate, map(pos, 0, interval, 0, led_pattern[pattern_index][1])*brightness_rate, map(pos, 0, interval, 0, led_pattern[pattern_index][2])*brightness_rate);
+      }
+      else if (timer_count <= (interval * 6 - delay_time * 2))
+      {
+        int pos = timer_count - (5 * interval - delay_time * 2);
+        strip.setPixelColor(2, map(pos, 0, interval, led_pattern[pattern_index][0], 0)*brightness_rate, map(pos, 0, interval, led_pattern[pattern_index][1], 0)*brightness_rate, map(pos, 0, interval, led_pattern[pattern_index][2], 0)*brightness_rate);
+      }
+      else {
+        strip.setPixelColor(2, 0, 0, 0);
+      }
     }
   }
+
+  //  else if (odem_st == ACTIVE) {
+  //    const int interval = 50;
+  //    if (timer_count >= 300) {
+  //      timer_count = 0;
+  //      pattern_index++;
+  //      if (pattern_index >= LED_PATTERN_NUM) {
+  //        pattern_index = 0;
+  //      }
+  //    }
+  //    strip.setBrightness(255);
+  //    for (int i = 0; i < LED_NUM; i++) {
+  //      strip.setPixelColor(i, 0, 0, 0);
+  //    }
+  //    if (timer_count < 50)
+  //    {
+  //      int pos = timer_count;
+  //      strip.setPixelColor(0, map(pos, 0, interval, 0, led_pattern[pattern_index][0]), map(pos, 0, interval, 0, led_pattern[pattern_index][1]), map(pos, 0, interval, 0, led_pattern[pattern_index][2]));
+  //    }
+  //    else if (timer_count < 100)
+  //    {
+  //      int pos = timer_count - interval;
+  //      strip.setPixelColor(0, map(pos, 0, interval, led_pattern[pattern_index][0], 0), map(pos, 0, interval, led_pattern[pattern_index][1], 0), map(pos, 0, interval, led_pattern[pattern_index][2], 0));
+  //    }
+  //    else if (timer_count < 150)
+  //    {
+  //      int pos = timer_count - (2 * interval);
+  //      strip.setPixelColor(1, map(pos, 0, interval, 0, led_pattern[pattern_index][0]), map(pos, 0, interval, 0, led_pattern[pattern_index][1]), map(pos, 0, interval, 0, led_pattern[pattern_index][2]));
+  //    }
+  //    else if (timer_count < 200)
+  //    {
+  //      int pos = timer_count - (3 * interval);
+  //      strip.setPixelColor(1, map(pos, 0, interval, led_pattern[pattern_index][0], 0), map(pos, 0, interval, led_pattern[pattern_index][1], 0), map(pos, 0, interval, led_pattern[pattern_index][2], 0));
+  //    }
+  //    else if (timer_count < 250)
+  //    {
+  //      int pos = timer_count - (4 * interval);
+  //      strip.setPixelColor(2, map(pos, 0, interval, 0, led_pattern[pattern_index][0]), map(pos, 0, interval, 0, led_pattern[pattern_index][1]), map(pos, 0, interval, 0, led_pattern[pattern_index][2]));
+  //    }
+  //    else if (timer_count <= 300)
+  //    {
+  //      int pos = timer_count - (5 * interval);
+  //      strip.setPixelColor(2, map(pos, 0, interval, led_pattern[pattern_index][0], 0), map(pos, 0, interval, led_pattern[pattern_index][1], 0), map(pos, 0, interval, led_pattern[pattern_index][2], 0));
+  //    }
+  //  }
   else if (odem_st == WHEEL) {
     if (timer_count > 255) {
       timer_count = 0;
@@ -184,6 +286,12 @@ int touch_ave = 0;
 
 
 void loop() {
+//  strip2.setBrightness(255);
+//  for (int i = 0; i < strip2.numPixels(); i++) {
+//    strip2.setPixelColor(i, 255,255,255);
+//  }
+//  
+//  strip2.show();
   digitalWrite(ODEM_TOUCH_OUT_PIN, HIGH);
   while (digitalRead(ODEM_TOUCH_IN_PIN) == LOW) {
     touch_count++;
@@ -205,6 +313,7 @@ void loop() {
   b_door = digitalRead(ODEM_MAGNET_IN_PIN);
   if (ex_b_door == false && b_door == true) {
     timer_count = 0;
+    active_st = 0;
     odem_st = ACTIVE;
     door_int_flag = true;
     door_count = 0;
@@ -221,8 +330,9 @@ void loop() {
           odem_st = WHEEL;
         }
         else if (odem_st == WHEEL) {
-          odem_st = ACTIVE;
+          active_st = 0;
           timer_count = 0;
+          odem_st = ACTIVE;
         }
         else if (odem_st == ACTIVE) {
           odem_st = SLEEP;
